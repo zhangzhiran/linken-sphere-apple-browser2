@@ -16,7 +16,7 @@ jobs:
       uses: actions/checkout@v4
       
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.11'
         
@@ -47,13 +47,12 @@ jobs:
         
     - name: Build macOS app with PyInstaller
       run: |
+        echo "Building on $(uname -m)"
         python -m PyInstaller \
-          --onefile \
           --windowed \
           --name=LinkenSphereAppleBrowser \
           --clean \
           --noconfirm \
-          --target-arch=universal2 \
           --osx-bundle-identifier=com.linkensphere.applebrowser \
           --hidden-import=tkinter \
           --hidden-import=tkinter.ttk \
@@ -84,19 +83,30 @@ jobs:
           exit 1
         fi
         
-    - name: Create DMG with create-dmg
+    - name: Create DMG (with fallback)
+      shell: bash
       run: |
-        create-dmg \
-          --volname "LinkenSphere Apple Browser" \
-          --volicon "app_icon.icns" \
-          --window-pos 200 120 \
-          --window-size 600 300 \
-          --icon-size 100 \
-          --icon "LinkenSphereAppleBrowser.app" 175 120 \
-          --hide-extension "LinkenSphereAppleBrowser.app" \
-          --app-drop-link 425 120 \
-          "LinkenSphereAppleBrowser-macOS.dmg" \
-          "dist/"
+        set -e
+        if command -v create-dmg >/dev/null 2>&1; then
+          create-dmg \
+            --volname "LinkenSphere Apple Browser" \
+            --volicon "app_icon.icns" \
+            --window-pos 200 120 \
+            --window-size 600 300 \
+            --icon-size 100 \
+            --icon "LinkenSphereAppleBrowser.app" 175 120 \
+            --hide-extension "LinkenSphereAppleBrowser.app" \
+            --app-drop-link 425 120 \
+            "LinkenSphereAppleBrowser-macOS.dmg" \
+            "dist/" || true
+        fi
+        if [ ! -f "LinkenSphereAppleBrowser-macOS.dmg" ]; then
+          hdiutil create \
+            -volname "LinkenSphere Apple Browser" \
+            -srcfolder dist \
+            -ov -format UDZO \
+            LinkenSphereAppleBrowser-macOS.dmg
+        fi
           
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
