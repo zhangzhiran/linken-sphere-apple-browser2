@@ -1,0 +1,119 @@
+name: Build macOS App
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:  # 允许手动触发
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install system dependencies
+      run: |
+        # 安装必要的系统工具
+        brew install create-dmg
+        
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pyinstaller>=6.0.0
+
+    - name: Install Playwright browsers
+      run: |
+        python -m playwright install
+        
+    - name: Create app icon (if needed)
+      run: |
+        # 如果有PNG图标，转换为ICNS
+        if [ -f "app_icon.png" ]; then
+          sips -s format icns app_icon.png --out app_icon.icns
+          echo "✅ Icon converted to ICNS"
+        else
+          echo "⚠️ No app_icon.png found, using default icon"
+        fi
+        
+    - name: Build macOS app with PyInstaller
+      run: |
+        python -m PyInstaller \
+          --onefile \
+          --windowed \
+          --name=LinkenSphereAppleBrowser \
+          --clean \
+          --noconfirm \
+          --target-arch=universal2 \
+          --osx-bundle-identifier=com.linkensphere.applebrowser \
+          --hidden-import=tkinter \
+          --hidden-import=tkinter.ttk \
+          --hidden-import=tkinter.scrolledtext \
+          --hidden-import=tkinter.filedialog \
+          --hidden-import=tkinter.messagebox \
+          --hidden-import=requests \
+          --hidden-import=playwright \
+          --hidden-import=asyncio \
+          --hidden-import=threading \
+          --hidden-import=json \
+          --hidden-import=PIL \
+          --hidden-import=PIL.Image \
+          --hidden-import=PIL.ImageTk \
+          $([ -f "app_icon.icns" ] && echo "--icon=app_icon.icns") \
+          $([ -f "requirements.txt" ] && echo "--add-data=requirements.txt:.") \
+          $([ -f "linken_sphere_api.py" ] && echo "--add-data=linken_sphere_api.py:.") \
+          $([ -f "linken_sphere_playwright_browser.py" ] && echo "--add-data=linken_sphere_playwright_browser.py:.") \
+          simple_linken_gui.py
+          
+    - name: Verify app creation
+      run: |
+        if [ -d "dist/LinkenSphereAppleBrowser.app" ]; then
+          echo "✅ App created successfully"
+          ls -la dist/
+        else
+          echo "❌ App creation failed"
+          exit 1
+        fi
+        
+    - name: Create DMG with create-dmg
+      run: |
+        create-dmg \
+          --volname "LinkenSphere Apple Browser" \
+          --volicon "app_icon.icns" \
+          --window-pos 200 120 \
+          --window-size 600 300 \
+          --icon-size 100 \
+          --icon "LinkenSphereAppleBrowser.app" 175 120 \
+          --hide-extension "LinkenSphereAppleBrowser.app" \
+          --app-drop-link 425 120 \
+          "LinkenSphereAppleBrowser-macOS.dmg" \
+          "dist/"
+          
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: macos-app
+        path: |
+          dist/LinkenSphereAppleBrowser.app
+          LinkenSphereAppleBrowser-macOS.dmg
+        retention-days: 30
+        
+    - name: Create Release (on tag)
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          LinkenSphereAppleBrowser-macOS.dmg
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

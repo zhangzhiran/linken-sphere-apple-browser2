@@ -1,0 +1,42 @@
+# Linken Sphere Apple Browser - Cross-Platform Requirements
+# Compatible with Python 3.8+ on Windows, macOS, and Linux
+
+# Build and Packaging
+pyinstaller>=6.0.0
+
+# GUI Framework (usually included with Python)
+# tkinter - included with Python standard library
+
+# Image Processing (for cross-platform icon support)
+Pillow>=9.0.0
+
+# HTTP Requests (for Linken Sphere API)
+requests>=2.28.0
+
+# Browser Automation
+playwright>=1.40.0
+
+# Legacy browser automation (if needed)
+selenium>=4.15.0
+
+# Optional: Enhanced HTTP handling
+urllib3>=1.26.0
+
+# Standard library modules (included with Python):
+# - tkinter (GUI framework)
+# - asyncio (asynchronous programming)
+# - threading (multi-threading support)
+# - json (JSON handling)
+# - pathlib (cross-platform path handling)
+# - configparser (configuration files)
+# - logging (logging support)
+# - platform (platform detection)
+# - os (operating system interface)
+# - sys (system-specific parameters)
+# - subprocess (process management)
+# - socket (network interface)
+
+# Development and Testing (optional)
+# pytest>=7.0.0    # Uncomment for testing
+# black>=22.0.0     # Uncomment for code formatting
+# flake8>=5.0.0     # Uncomment for linting
